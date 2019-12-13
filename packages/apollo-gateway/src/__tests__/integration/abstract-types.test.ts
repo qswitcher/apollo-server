@@ -46,18 +46,21 @@ it('handles an abstract type from the base service', async () => {
         Fetch(service: "product") {
           {
             product(upc: $upc) {
+              ...__QueryPlanFragment_0__
+            }
+          }
+          fragment __QueryPlanFragment_0__ on Product {
+            __typename
+            ... on Book {
+              upc
               __typename
-              ... on Book {
-                upc
-                __typename
-                isbn
-                price
-              }
-              ... on Furniture {
-                upc
-                name
-                price
-              }
+              isbn
+              price
+            }
+            ... on Furniture {
+              upc
+              name
+              price
             }
           }
         },
@@ -129,15 +132,18 @@ it('can request fields on extended interfaces', async () => {
         Fetch(service: "product") {
           {
             product(upc: $upc) {
+              ...__QueryPlanFragment_1__
+            }
+          }
+          fragment __QueryPlanFragment_1__ on Product {
+            __typename
+            ... on Book {
               __typename
-              ... on Book {
-                __typename
-                isbn
-              }
-              ... on Furniture {
-                __typename
-                sku
-              }
+              isbn
+            }
+            ... on Furniture {
+              __typename
+              sku
             }
           }
         },
@@ -198,15 +204,18 @@ it('can request fields on extended types that implement an interface', async () 
         Fetch(service: "product") {
           {
             product(upc: $upc) {
+              ...__QueryPlanFragment_2__
+            }
+          }
+          fragment __QueryPlanFragment_2__ on Product {
+            __typename
+            ... on Book {
               __typename
-              ... on Book {
-                __typename
-                isbn
-              }
-              ... on Furniture {
-                __typename
-                sku
-              }
+              isbn
+            }
+            ... on Furniture {
+              __typename
+              sku
             }
           }
         },
@@ -271,15 +280,18 @@ it('prunes unfilled type conditions', async () => {
         Fetch(service: "product") {
           {
             product(upc: $upc) {
+              ...__QueryPlanFragment_3__
+            }
+          }
+          fragment __QueryPlanFragment_3__ on Product {
+            __typename
+            ... on Book {
               __typename
-              ... on Book {
-                __typename
-                isbn
-              }
-              ... on Furniture {
-                __typename
-                sku
-              }
+              isbn
+            }
+            ... on Furniture {
+              __typename
+              sku
             }
           }
         },
@@ -354,9 +366,12 @@ it('fetches interfaces returned from other services', async () => {
         Fetch(service: "accounts") {
           {
             me {
-              __typename
-              id
+              ...__QueryPlanFragment_6__
             }
+          }
+          fragment __QueryPlanFragment_6__ on User {
+            __typename
+            id
           }
         },
         Flatten(path: "me") {
@@ -370,18 +385,24 @@ it('fetches interfaces returned from other services', async () => {
             {
               ... on User {
                 reviews {
-                  product {
-                    __typename
-                    ... on Book {
-                      __typename
-                      isbn
-                    }
-                    ... on Furniture {
-                      __typename
-                      upc
-                    }
-                  }
+                  ...__QueryPlanFragment_5__
                 }
+              }
+            }
+            fragment __QueryPlanFragment_4__ on Product {
+              __typename
+              ... on Book {
+                __typename
+                isbn
+              }
+              ... on Furniture {
+                __typename
+                upc
+              }
+            }
+            fragment __QueryPlanFragment_5__ on Review {
+              product {
+                ...__QueryPlanFragment_4__
               }
             }
           },
@@ -472,9 +493,12 @@ it('fetches composite fields from a foreign type casted to an interface [@provid
         Fetch(service: "accounts") {
           {
             me {
-              __typename
-              id
+              ...__QueryPlanFragment_9__
             }
+          }
+          fragment __QueryPlanFragment_9__ on User {
+            __typename
+            id
           }
         },
         Flatten(path: "me") {
@@ -488,18 +512,24 @@ it('fetches composite fields from a foreign type casted to an interface [@provid
             {
               ... on User {
                 reviews {
-                  product {
-                    __typename
-                    ... on Book {
-                      __typename
-                      isbn
-                    }
-                    ... on Furniture {
-                      __typename
-                      upc
-                    }
-                  }
+                  ...__QueryPlanFragment_8__
                 }
+              }
+            }
+            fragment __QueryPlanFragment_7__ on Product {
+              __typename
+              ... on Book {
+                __typename
+                isbn
+              }
+              ... on Furniture {
+                __typename
+                upc
+              }
+            }
+            fragment __QueryPlanFragment_8__ on Review {
+              product {
+                ...__QueryPlanFragment_7__
               }
             }
           },
@@ -604,15 +634,18 @@ it('allows for extending an interface from another service with fields', async (
         Fetch(service: "product") {
           {
             product(upc: $upc) {
+              ...__QueryPlanFragment_11__
+            }
+          }
+          fragment __QueryPlanFragment_11__ on Product {
+            __typename
+            ... on Book {
               __typename
-              ... on Book {
-                __typename
-                isbn
-              }
-              ... on Furniture {
-                __typename
-                upc
-              }
+              isbn
+            }
+            ... on Furniture {
+              __typename
+              upc
             }
           }
         },
@@ -631,14 +664,17 @@ it('allows for extending an interface from another service with fields', async (
             {
               ... on Book {
                 reviews {
-                  body
+                  ...__QueryPlanFragment_10__
                 }
               }
               ... on Furniture {
                 reviews {
-                  body
+                  ...__QueryPlanFragment_10__
                 }
               }
+            }
+            fragment __QueryPlanFragment_10__ on Review {
+              body
             }
           },
         },
@@ -702,9 +738,12 @@ describe('unions', () => {
           Fetch(service: "accounts") {
             {
               me {
-                __typename
-                id
+                ...__QueryPlanFragment_15__
               }
+            }
+            fragment __QueryPlanFragment_15__ on User {
+              __typename
+              id
             }
           },
           Flatten(path: "me") {
@@ -718,18 +757,24 @@ describe('unions', () => {
               {
                 ... on User {
                   reviews {
-                    product {
-                      __typename
-                      ... on Book {
-                        __typename
-                        isbn
-                      }
-                      ... on Furniture {
-                        __typename
-                        upc
-                      }
-                    }
+                    ...__QueryPlanFragment_14__
                   }
+                }
+              }
+              fragment __QueryPlanFragment_13__ on Product {
+                __typename
+                ... on Book {
+                  __typename
+                  isbn
+                }
+                ... on Furniture {
+                  __typename
+                  upc
+                }
+              }
+              fragment __QueryPlanFragment_14__ on Review {
+                product {
+                  ...__QueryPlanFragment_13__
                 }
               }
             },
@@ -753,14 +798,17 @@ describe('unions', () => {
                 ... on Furniture {
                   price
                   brand {
-                    __typename
-                    ... on Ikea {
-                      asile
-                    }
-                    ... on Amazon {
-                      referrer
-                    }
+                    ...__QueryPlanFragment_12__
                   }
+                }
+              }
+              fragment __QueryPlanFragment_12__ on Brand {
+                __typename
+                ... on Ikea {
+                  asile
+                }
+                ... on Amazon {
+                  referrer
                 }
               }
             },
@@ -811,9 +859,12 @@ describe('unions', () => {
         Fetch(service: "products") {
           {
             topProducts {
-              __typename
-              name
+              ...__QueryPlanFragment_16__
             }
+          }
+          fragment __QueryPlanFragment_16__ on Product {
+            __typename
+            name
           }
         },
       }
