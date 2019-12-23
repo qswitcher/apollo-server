@@ -166,7 +166,6 @@ export class ApolloServerBase {
       modules,
       typeDefs,
       parseOptions = {},
-      introspection,
       mocks,
       mockEntireSchema,
       extensions,
@@ -204,8 +203,8 @@ export class ApolloServerBase {
     // in production, we can manually turn introspection on by passing {
     // introspection: true } to the constructor of ApolloServer
     if (
-      (typeof introspection === 'boolean' && !introspection) ||
-      (introspection === undefined && !isDev)
+      (typeof requestOptions.introspection === 'boolean' && !requestOptions.introspection) ||
+      (requestOptions.introspection === undefined && !isDev)
     ) {
       const noIntro = [NoIntrospection];
       requestOptions.validationRules = requestOptions.validationRules

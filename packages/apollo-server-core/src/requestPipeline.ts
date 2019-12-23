@@ -7,6 +7,7 @@ import {
   ExecutionArgs,
   GraphQLError,
   GraphQLFormattedError,
+  BREAK
 } from 'graphql';
 import * as graphql from 'graphql';
 import {
@@ -75,6 +76,7 @@ export interface GraphQLRequestPipelineConfig<TContext> {
   schema: GraphQLSchema;
 
   rootValue?: ((document: DocumentNode) => any) | any;
+  introspection?: boolean | ((requestContext: GraphQLRequestContext<TContext>) => ValidationRule[]);
   validationRules?: ValidationRule[];
   executor?: GraphQLExecutor;
   fieldResolver?: GraphQLFieldResolver<any, TContext>;
@@ -249,7 +251,11 @@ export async function processGraphQLRequest<TContext>(
         >,
       );
 
-      const validationErrors = validate(requestContext.document);
+      const validationErrors = validate(requestContext as WithRequired<
+        typeof requestContext,
+        'document'
+      >);
+
 
       if (validationErrors.length === 0) {
         validationDidEnd();
@@ -258,7 +264,7 @@ export async function processGraphQLRequest<TContext>(
         return await sendErrorResponse(validationErrors, ValidationError);
       }
 
-      if (config.documentStore) {
+      if (config.documentStore && !isIntrospectionQuery(requestContext.document)) {
         // The underlying cache store behind the `documentStore` returns a
         // `Promise` which is resolved (or rejected), eventually, based on the
         // success or failure (respectively) of the cache save attempt.  While
@@ -271,6 +277,9 @@ export async function processGraphQLRequest<TContext>(
         // While it shouldn't normally be necessary to wrap this `Promise` in a
         // `Promise.resolve` invocation, it seems that the underlying cache store
         // is returning a non-native `Promise` (e.g. Bluebird, etc.).
+        //
+        // We don't cache the introspection query to force validation on every
+        // introspection query to allow for user-based auth
         Promise.resolve(
           config.documentStore.set(queryHash, requestContext.document),
         ).catch(err =>
@@ -422,10 +431,27 @@ export async function processGraphQLRequest<TContext>(
     }
   }
 
-  function validate(document: DocumentNode): ReadonlyArray<GraphQLError> {
+  function validate(
+    requestContext: WithRequired<GraphQLRequestContext<TContext>, 'document'>,
+  ): ReadonlyArray<GraphQLError> {
+    const document = requestContext.document;
     let rules = specifiedRules;
     if (config.validationRules) {
       rules = rules.concat(config.validationRules);
+    }
+
+    if (isIntrospectionQuery(document)) {
+      const introspection = config.introspection;
+      if (
+        typeof introspection === 'function' &&
+        !introspection(requestContext)
+      ) {
+        return [
+          new InvalidGraphQLRequestError(
+            'The function passed into the introspection configuration option for ApolloServer returned false for this query, but the query introspection is not allowed by the given introspection function, but the query contained __schema or __type.',
+          ),
+        ];
+      }
     }
 
     const validationDidEnd = extensionStack.validationDidStart();
@@ -435,6 +461,19 @@ export async function processGraphQLRequest<TContext>(
     } finally {
       validationDidEnd();
     }
+  }
+
+  function isIntrospectionQuery(document: DocumentNode): boolean {
+    let result = false;
+    graphql.visit(document, {
+      Field(node) {
+        if (node.name.value === '__schema' || node.name.value === '__type') {
+          result = true;
+          return BREAK;
+        }
+      }
+    });
+    return result;
   }
 
   async function execute(

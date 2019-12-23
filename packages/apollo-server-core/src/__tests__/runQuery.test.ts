@@ -18,7 +18,7 @@ import {
 
 import { processGraphQLRequest, GraphQLRequest } from '../requestPipeline';
 import { Request } from 'apollo-server-env';
-import { GraphQLOptions, Context as GraphQLContext } from 'apollo-server-core';
+import { GraphQLOptions, Context as GraphQLContext, GraphQLRequestContext, ValidationRule } from 'apollo-server-core';
 import { ApolloServerPlugin } from 'apollo-server-plugin-base';
 import { GraphQLRequestListener } from 'apollo-server-plugin-base';
 import { InMemoryLRUCache } from 'apollo-server-caching';
@@ -45,6 +45,8 @@ function runQuery(options: QueryOptions): Promise<GraphQLResponse> {
   });
 }
 
+type IntrospectionType = boolean | ((requestContext: GraphQLRequestContext<GraphQLContext<any>>) => ValidationRule[]);
+
 interface QueryOptions
   extends Pick<
     GraphQLOptions<GraphQLContext<any>>,
@@ -62,6 +64,7 @@ interface QueryOptions
     | 'tracing'
     | 'validationRules'
   > {
+  introspection?: IntrospectionType;
   queryString?: string;
   parsedQuery?: DocumentNode;
   variables?: { [key: string]: any };
@@ -597,10 +600,12 @@ describe('runQuery', () => {
       queryString = '{ testString }',
       plugins = [],
       documentStore,
+      introspection
     }: {
       queryString?: string;
       plugins?: ApolloServerPlugin[];
       documentStore?: QueryOptions['documentStore'];
+      introspection?: IntrospectionType
     }) {
       return runQuery({
         schema,
@@ -608,6 +613,36 @@ describe('runQuery', () => {
         queryString,
         plugins,
         request: new MockReq(),
+        introspection
+      });
+    }
+
+    function runIntrospectionQuery({
+      queryString = `{
+        __schema {
+          types {
+            name
+          }
+        }
+      }`,
+      plugins = [],
+      documentStore,
+      introspection = true,
+      request = new MockReq()
+    }: {
+      queryString?: string;
+      plugins?: ApolloServerPlugin[];
+      documentStore?: QueryOptions['documentStore'];
+      introspection?: IntrospectionType,
+      request?: any
+    }) {
+      return runQuery({
+        schema,
+        documentStore,
+        queryString,
+        plugins,
+        request,
+        introspection
       });
     }
 
@@ -651,6 +686,68 @@ describe('runQuery', () => {
       await runRequest({ plugins });
       expect(parsingDidStart.mock.calls.length).toBe(2);
       expect(validationDidStart.mock.calls.length).toBe(2);
+    });
+
+    it('validates each time for introspection queries', async () => {
+      expect.assertions(4);
+      const documentStore = new InMemoryLRUCache<DocumentNode>();
+
+      const {
+        plugins,
+        events: { parsingDidStart, validationDidStart },
+      } = createLifecyclePluginMocks();
+
+      // An uncached request will have 1 parse and 1 validate call.
+      await runIntrospectionQuery({ plugins, documentStore });
+      expect(parsingDidStart.mock.calls.length).toBe(1);
+      expect(validationDidStart.mock.calls.length).toBe(1);
+
+      // The second request should still only have a 1 validate and 1 parse.
+      await runIntrospectionQuery({ plugins, documentStore });
+      expect(parsingDidStart.mock.calls.length).toBe(2);
+      expect(validationDidStart.mock.calls.length).toBe(2);
+    });
+
+    it('validates introspection query with introspection function', async () => {
+      expect.assertions(5);
+      const documentStore = new InMemoryLRUCache<DocumentNode>();
+
+      const { plugins } = createLifecyclePluginMocks();
+
+      const introspection = (
+        requestContext: GraphQLRequestContext<GraphQLContext<any>>,
+      ) => {
+        // @ts-ignore
+        return requestContext.request.http.headers['authorization'] === 'admin';
+      };
+
+      // An uncached request will have 1 parse and 1 validate call.
+      let res = await runIntrospectionQuery({
+        plugins,
+        documentStore,
+        request: new MockReq({
+          headers: {
+            Authorization: 'foobar',
+          },
+        }),
+        introspection,
+      });
+      expect(res.data).toBeUndefined();
+      expect(res.errors!.length).toEqual(1);
+      expect(res.errors![0].message).toMatch('introspection is not allowed');
+
+      res = await runIntrospectionQuery({
+        plugins,
+        documentStore,
+        request: new MockReq({
+          headers: {
+            Authorization: 'admin',
+          },
+        }),
+        introspection,
+      });
+      expect(res.data).toBeDefined();
+      expect(res.errors).toBeUndefined();
     });
 
     it('caches the DocumentNode in the documentStore when instrumented', async () => {

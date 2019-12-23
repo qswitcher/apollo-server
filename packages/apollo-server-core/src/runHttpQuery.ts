@@ -168,6 +168,7 @@ export async function runHttpQuery(
     rootValue: options.rootValue,
     context: options.context || {},
     validationRules: options.validationRules,
+    introspection: options.introspection,
     executor: options.executor,
     fieldResolver: options.fieldResolver,
 

@@ -15,6 +15,7 @@ import { GraphQLParseOptions } from 'graphql-tools';
 import {
   GraphQLExecutor,
   ValueOrPromise,
+  ValidationRule,
   GraphQLResponse,
   GraphQLRequestContext,
 } from 'apollo-server-types';
@@ -44,6 +45,7 @@ export interface GraphQLServerOptions<
   rootValue?: ((parsedQuery: DocumentNode) => TRootValue) | TRootValue;
   context?: TContext | (() => never);
   validationRules?: Array<(context: ValidationContext) => any>;
+  introspection?: boolean | ((requestContext: GraphQLRequestContext<TContext>) => ValidationRule[]);
   executor?: GraphQLExecutor;
   formatResponse?: (
     response: GraphQLResponse | null,
